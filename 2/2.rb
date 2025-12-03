@@ -1,4 +1,5 @@
 require_relative "../utils"
+require 'benchmark'
 
 def convert_to_arr_of_ranges(input)
   arr = input.is_a?(String) ? input.split(',') : input[0].split(',')
@@ -39,30 +40,38 @@ end
 def invalid_ids_sum_two(input)
   ranges = convert_to_arr_of_ranges(input)
   invalid_ids = []
-  divisors = []
 
   ranges.each do |range|
-    ids_arr = range.to_a
-
-    ids_arr.each do |id|
+    range.each do |id|
       id_string = id.to_s
       id_length = id_string.length
+      max_divisor = id_length / 2
 
-      divisors = (1..(id_length / 2)).filter {|n| id_length % n == 0 }
-      is_invalid = false
+      (1..max_divisor).each do |divisor|
+        next unless id_length % divisor == 0
 
-      divisors.each do |divisor|
-        arr = id_string.scan(/.{#{divisor}}/)
-        if arr.uniq.length == 1
-          is_invalid = true
+        num_chunks = id_length / divisor
+        next unless num_chunks >= 2
+
+        first_chunk = id_string[0, divisor]
+        invalid_id = true
+
+        (1...num_chunks).each do |chunk_index|
+          start_position = chunk_index * divisor
+          if id_string[start_position, divisor] != first_chunk
+            invalid_id = false
+            break
+          end
+        end
+
+        if invalid_id
+          invalid_ids << id
           break
         end
-      end
 
-      invalid_ids << id if is_invalid
+      end
     end
   end
-  
   invalid_ids.reduce(:+)
 end
 
@@ -87,5 +96,8 @@ puts result === 4174379265 ? colorize("test Passed", 32) : colorize("test failed
 
 # REAL TEST
 puts "Running real data test 2"
-result = invalid_ids_sum_two(REAL_DATA)
+time = Benchmark.measure do
+  result = invalid_ids_sum_two(REAL_DATA)
+end
+puts 'time taken -> ', time
 puts result === 30962646823 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
