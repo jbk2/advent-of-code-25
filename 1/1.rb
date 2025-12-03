@@ -56,29 +56,8 @@ def total_clicks_on_zero(start_position, input)
 end
 
 
-################ ANSI STYLE HELPER ####################
-BLACK   = 30
-RED     = 31
-GREEN   = 32
-YELLOW  = 33
-BLUE    = 34
-MAGENTA = 35
-CYAN    = 36
-WHITE   = 37
-RESET   = 0
-BOLD    = 1
-ITALIC  = 3
-UNDERLINE = 4
-
-def colorize(text, color_code)
-  "\e[#{color_code}m#{text}\e[0m"
-end
-
-####################################
-
 MINI_TEST_DATA = ["L68", "L30", "R48", "L5", "R60", "L55", "L1", "L99", "R14", "L82"]
 REAL_DATA = fetch_puzzle_input(1)
-
 
 puts "Running mini test 1"
 result = number_of_zeros_at_end(50, MINI_TEST_DATA)
