@@ -75,6 +75,31 @@ def invalid_ids_sum_two(input)
   invalid_ids.reduce(:+)
 end
 
+def invalid_ids_sum_three(input)
+  ranges = convert_to_arr_of_ranges(input)
+  invalid_ids = []
+
+  ranges.each do |range|
+    range.each do |id|
+      id_string = id.to_s
+      id_length = id_string.length
+
+      is_invalid = (1..(id_length / 2)).any? do |divisor|
+        next false unless id_length % divisor == 0
+
+        num_chunks = id_length / divisor
+        next false unless num_chunks >= 2
+
+        first_chunk = id_string[0, divisor]
+        (1...num_chunks).all? { |i| id_string[i * divisor, divisor] == first_chunk }
+      end
+
+      invalid_ids << id if is_invalid
+    end
+  end
+  invalid_ids.reduce(:+)
+end
+
 
 
 ####################################
@@ -91,13 +116,13 @@ puts result === 24747430309 ? colorize("test Passed", 32) : colorize("test faile
 
 # MINI TEST
 puts "Running test 2"
-result = invalid_ids_sum_two(TEST_DATA)
+result = invalid_ids_sum_three(TEST_DATA)
 puts result === 4174379265 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
 
 # REAL TEST
 puts "Running real data test 2"
 time = Benchmark.measure do
-  result = invalid_ids_sum_two(REAL_DATA)
+  result = invalid_ids_sum_three(REAL_DATA)
 end
 puts 'time taken -> ', time
 puts result === 30962646823 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
