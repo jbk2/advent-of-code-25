@@ -10,17 +10,16 @@ def max_joltage(input)
   bank_maximums = []
 
   input.each do |bank|
-    bank_arr = bank.chars
+    bank_digits = bank.chars.map(&:to_i)
     max_val = 0
 
-    bank_arr.each_with_index do |first_battery, index|
-      bank_remainder = bank_arr[index+1..-1]
+    bank_digits.each_with_index do |first_battery, index|
+      remainder = bank_digits[index + 1..-1]
+      next if remainder.empty?      
       
-      bank_remainder.each do |second_battery|
-        battery_pair_joltage = (first_battery + second_battery).to_i
-        max_val = [battery_pair_joltage, max_val].max
-        # binding.irb
-      end
+      best_second_battery = bank_digits[(index + 1)..-1].max
+      max_val = [first_battery * 10 + best_second_battery, max_val].max
+      # binding.irb
     end
 
     bank_maximums << max_val
