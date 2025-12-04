@@ -72,12 +72,8 @@ result = max_joltage_twelve(TEST_DATA)
 puts result === 3121910778619 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
 
 puts "Running real data test 2"
-result = max_joltage_twelve(REAL_DATA)
+time = Benchmark.measure do
+  result = max_joltage_twelve(REAL_DATA)
+end
+puts 'time taken -> ', time
 puts result === 173161749617495 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
-
-# puts "Running real data test 2"
-# time = Benchmark.measure do
-#   result = invalid_ids_sum_three(REAL_DATA)
-# end
-# puts 'time taken -> ', time
-# puts result === 30962646823 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
