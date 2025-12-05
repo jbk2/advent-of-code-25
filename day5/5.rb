@@ -34,6 +34,34 @@ def fresh_ingredient_count(input)
   fresh_ingredient_count
 end
 
+def fresh_ingredient_id_count(input)
+  # fresh ids only
+  fresh_ids = input.select { |el| el.include?('-') }
+
+  # turn them into ranges
+  fresh_id_ranges = fresh_ids.map do |str|
+    match = str.match(/^(\d+)-(\d+)$/)
+    Range.new(match[1].to_i, match[2].to_i)
+  end
+
+  merged_ranges = merge_ranges(fresh_id_ranges)
+  
+  merged_ranges.sum { |range| range.size }
+end
+
+def merge_ranges(ranges)
+  sorted = ranges.sort_by(&:begin)
+  merged = []
+
+  sorted.each do |range|
+    if merged.empty? || merged.last.end < range.begin - 1 # -1 because if they're consecutive we shoudl still merge them
+      merged << range
+    else
+      merged[-1] = merged[-1].begin..[merged[-1].end, range.end].max
+    end
+  end
+  merged
+end
 
 
 ####################################
@@ -54,13 +82,13 @@ puts "Running real data test 1"
 result = fresh_ingredient_count(REAL_DATA)
 puts result === 601 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
 
-# # puts "Running test 2"
-# result = total_accessible_rolls(TEST_DATA)
-# puts result === 43 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
+puts "Running test 2"
+result = fresh_ingredient_id_count(TEST_DATA)
+puts result === 14 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
 
-# puts "Running real data test 2"
-# time = Benchmark.measure do
-#   result = total_accessible_rolls(REAL_DATA)
-# end
-# puts 'time taken -> ', time
-# puts result === 8616 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
+puts "Running real data test 2"
+time = Benchmark.measure do
+  result = fresh_ingredient_id_count(REAL_DATA)
+end
+puts 'time taken -> ', time
+puts result === 367899984917516 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
