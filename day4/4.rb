@@ -31,9 +31,23 @@ def accessible_rolls(input)
     end
   end
 
-  accessible_roll_count
+  input = adjusted_input
+  return { updated_input: input, removed: accessible_roll_count }
 end
 
+
+def total_accessible_rolls(input, roll_counter = 0)
+  roll_removal_operation_object = accessible_rolls(input)
+  removed_rolls = roll_removal_operation_object[:removed]
+  updated_list = roll_removal_operation_object[:updated_input]
+
+
+  return roll_counter if removed_rolls == 0
+
+  roll_counter += removed_rolls
+  # puts("roll counter is; #{roll_counter}", "removed rolls last iteration were; #{removed_rolls}")
+  total_accessible_rolls(updated_list, roll_counter)
+end
 
 
 
@@ -46,20 +60,20 @@ REAL_DATA = fetch_puzzle_input(4)
 # puts accessible_rolls(TEST_DATA)
 
 puts "Running test 1"
-result = accessible_rolls(TEST_DATA)
+result = accessible_rolls(TEST_DATA)[:removed]
 puts result === 13 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
 
 puts "Running real data test 1"
-result = accessible_rolls(REAL_DATA)
-puts result === 17427 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
+result = accessible_rolls(REAL_DATA)[:removed]
+puts result === 1433 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
 
 # puts "Running test 2"
-# result = max_joltage_twelve(TEST_DATA)
-# puts result === 3121910778619 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
+result = total_accessible_rolls(TEST_DATA)
+puts result === 43 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
 
-# puts "Running real data test 2"
-# time = Benchmark.measure do
-#   result = max_joltage_twelve(REAL_DATA)
-# end
-# puts 'time taken -> ', time
-# puts result === 173161749617495 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
+puts "Running real data test 2"
+time = Benchmark.measure do
+  result = total_accessible_rolls(REAL_DATA)
+end
+puts 'time taken -> ', time
+puts result === 8616 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
