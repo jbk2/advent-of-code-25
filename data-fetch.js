@@ -8,7 +8,7 @@ async function getInput(url) {
   });
   
   const text = await response.text();
-  const arr = text.split('\n').filter((entry) => entry.length > 0);
+  const arr = text.split('\n');
   
   return JSON.stringify(arr);
 }
