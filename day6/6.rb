@@ -86,6 +86,32 @@ def sum_calc(calcs_array)
   sum
 end
 
+def reverse_calc(input)
+  calculation_array = clean_data(input).map(&:chars).transpose.reverse
+  numbers_count = calculation_array.length
+  sum_array = []
+  calc_numbers = []
+  operator = nil
+
+  calculation_array.each_with_index do |arr, index|
+    separator = arr.all?(" ")
+
+    if separator
+      sum = calc_numbers.reduce{ |acc, number| acc.send(operator, number) }
+      sum_array << sum
+      calc_numbers, operator = [], nil
+    else
+      arr = arr.reject(&:empty?)
+      operator = arr.find { |char| %w[* +].include?(char) }
+      arr.delete(operator) if operator
+      number = arr.join.to_i
+      calc_numbers << number.to_i
+    end
+  end
+
+  sum_array << calc_numbers.reduce { |acc, number| acc.send(operator, number) } unless calc_numbers.empty?
+  sum_array.sum
+end
 ####################################
 
 TEST_DATA = ["123 328  51 64 ", " 45 64  387 23 ", "  6 98  215 314", "*   +   *   +  "]
@@ -96,8 +122,7 @@ TEST_DATA = ["123 328  51 64 ", " 45 64  387 23 ", "  6 98  215 314", "*   +   *
 
 REAL_DATA = fetch_puzzle_input(6)
 
-puts clean_data(TEST_DATA).inspect
-puts calculate_reverse_sum(TEST_DATA).inspect
+puts reverse_calc(TEST_DATA).inspect
 
 
 puts "Running test 1"
@@ -109,12 +134,12 @@ result = calculate(REAL_DATA)
 puts result === 5877594983578 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
 
 puts "Running test 2"
-result = calculate_reverse_sum(TEST_DATA)
+result = reverse_calc(TEST_DATA)
 puts result === 3263827 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
 
 puts "Running real data test 2"
 time = Benchmark.measure do
-  result = calculate_reverse_sum(REAL_DATA)
+  result = reverse_calc(REAL_DATA)
 end
 puts 'time taken -> ', time
-puts result === 367899984917516 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
+puts result === 11159825706149 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
