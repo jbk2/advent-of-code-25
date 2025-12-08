@@ -6,7 +6,7 @@ def parse_to_arrays(input)
   cleaned_input.reject(&:empty?)
 end
 
-def calculate(input)
+def calculate_pt_one(input)
   sum_of_sums = 0
   rows = parse_to_arrays(input)
   operators = rows.delete_at(-1)
@@ -112,6 +112,30 @@ def reverse_calc(input)
   sum_array << calc_numbers.reduce { |acc, number| acc.send(operator, number) } unless calc_numbers.empty?
   sum_array.sum
 end
+
+Problem = Struct.new(:columns) do
+  def numbers
+    columns.map { |col| col[..-2].join.to_i }.reject(&:zero?)
+  end
+
+  def operand
+    columns.flatten.find { |char| %w[+ *].include?(char) }
+  end
+
+  def solution
+    numbers.reduce(operand.to_sym)
+  end
+end
+
+def calculate_pt_two(input)
+  data = clean_data(input)
+  columns = data.map(&:chars).transpose.reverse
+  problems = columns.slice_before { |col| col.all?(" ") }.map { |cols| Problem.new(cols) }
+
+  problems.map(&:solution).sum
+end
+
+
 ####################################
 
 TEST_DATA = ["123 328  51 64 ", " 45 64  387 23 ", "  6 98  215 314", "*   +   *   +  "]
@@ -126,20 +150,20 @@ puts reverse_calc(TEST_DATA).inspect
 
 
 puts "Running test 1"
-result = calculate(TEST_DATA)
+result = calculate_pt_one(TEST_DATA)
 puts result === 4277556 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
 
 puts "Running real data test 1"
-result = calculate(REAL_DATA)
+result = calculate_pt_one(REAL_DATA)
 puts result === 5877594983578 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
 
 puts "Running test 2"
-result = reverse_calc(TEST_DATA)
+result = calculate_pt_two(TEST_DATA)
 puts result === 3263827 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
 
 puts "Running real data test 2"
 time = Benchmark.measure do
-  result = reverse_calc(REAL_DATA)
+  result = calculate_pt_two(REAL_DATA)
 end
 puts 'time taken -> ', time
 puts result === 11159825706149 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
