@@ -5,9 +5,13 @@ def is_splitter?(char)
   char === "^"
 end
 
-def split_counter(input)
-  input.reject!(&:empty?)
+def parse_to_2d_arrays(input)
+  input.reject(&:empty?)
   rows = input.map { _1.chars }
+end
+
+def split_counter(input)
+  rows = parse_to_2d_arrays(input)
   split_count = 0
   beam_indexes = []
 
@@ -33,16 +37,46 @@ def split_counter(input)
   split_count
 end
 
-# index of s > index in next row have '.' or '^'
+def dfs(row_idx, col_idx, rows, memo)
+  $call_count += 1
+  cache_key = [row_idx, col_idx]
+
+  return memo[cache_key] if memo.key?(cache_key)
+
+  if row_idx + 1 == rows.length
+    memo[cache_key] = 1
+    return 1
+  end
+  
+  next_row_idx = row_idx + 1
+  next_char = rows[next_row_idx][col_idx]
+  
+  if next_char == "^"
+    left_paths = dfs(next_row_idx, col_idx - 1, rows, memo)
+    right_paths = dfs(next_row_idx, col_idx + 1, rows, memo)
+    result = left_paths + right_paths
+  else
+    result =  dfs(next_row_idx, col_idx, rows, memo)
+  end
+  memo[cache_key] = result
+  return result
+end
+  
+def path_count(input)
+  $call_count = 0
+  memo = {}
+  rows = parse_to_2d_arrays(input)
+  start_col = rows[0].find_index('S')
+  start_coord = { row: 0, col: start_col }
+  result = dfs(start_coord[:row], start_coord[:col], rows, memo) 
+  puts "total recursive calls = #{$call_count}"
+  result
+end
 
 ####################################
 
 TEST_DATA = [".......S.......", "...............", ".......^.......", "...............", "......^.^......", "...............", ".....^.^.^.....", "...............", "....^.^...^....", "...............", "...^.^...^.^...", "...............", "..^...^.....^..", "...............", ".^.^.^.^.^...^.", "..............."]
 REAL_DATA = fetch_puzzle_input(7)
-# puts TEST_DATA.all? {_1.length == TEST_DATA[0].length }
-# split_counter(TEST_DATA).each { |row| puts row.inspect }
-# puts split_counter(TEST_DATA)
-
 
 puts "Running test 1"
 result = split_counter(TEST_DATA)
@@ -50,15 +84,15 @@ puts result === 21 ? colorize("test Passed", 32) : colorize("test failed with re
 
 puts "Running real data test 1"
 result = split_counter(REAL_DATA)
-puts result === 5877594983578 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
+puts result === 1537 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
 
-# puts "Running test 2"
-# result = calculate_pt_two(TEST_DATA)
-# puts result === 3263827 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
+puts "Running test 2"
+result = path_count(TEST_DATA)
+puts result === 40 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
 
-# puts "Running real data test 2"
-# time = Benchmark.measure do
-#   result = calculate_pt_two(REAL_DATA)
-# end
-# puts 'time taken -> ', time
-# puts result === 11159825706149 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
+puts "Running real data test 2"
+time = Benchmark.measure do
+  result = path_count(REAL_DATA)
+end
+puts 'time taken -> ', time
+puts result === 18818811755665 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
