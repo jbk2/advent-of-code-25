@@ -30,7 +30,7 @@ def split_counter(input)
     end
   end
 
-  rows
+  split_count
 end
 
 # index of s > index in next row have '.' or '^'
@@ -38,19 +38,19 @@ end
 ####################################
 
 TEST_DATA = [".......S.......", "...............", ".......^.......", "...............", "......^.^......", "...............", ".....^.^.^.....", "...............", "....^.^...^....", "...............", "...^.^...^.^...", "...............", "..^...^.....^..", "...............", ".^.^.^.^.^...^.", "..............."]
-
 REAL_DATA = fetch_puzzle_input(7)
 # puts TEST_DATA.all? {_1.length == TEST_DATA[0].length }
-split_counter(TEST_DATA).each { |row| puts row.inspect }
+# split_counter(TEST_DATA).each { |row| puts row.inspect }
+# puts split_counter(TEST_DATA)
 
 
-# puts "Running test 1"
-# result = calculate_pt_one(TEST_DATA)
-# puts result === 4277556 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
+puts "Running test 1"
+result = split_counter(TEST_DATA)
+puts result === 21 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
 
-# puts "Running real data test 1"
-# result = calculate_pt_one(REAL_DATA)
-# puts result === 5877594983578 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
+puts "Running real data test 1"
+result = split_counter(REAL_DATA)
+puts result === 5877594983578 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
 
 # puts "Running test 2"
 # result = calculate_pt_two(TEST_DATA)
