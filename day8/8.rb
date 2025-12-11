@@ -80,20 +80,24 @@ def connecting_coord_x_distance(coords_strings)
   end
 
   sorted_edges = edges.sort_by { _1.distance }
-  make_connections(sorted_edges)
+  tracker = CircuitTracker.new
+
+  sorted_edges.each do |edge|
+    if tracker.add_edge(edge)
+      puts tracker.circuits.size
+      if tracker.circuits.size == 1 && tracker.circuits[0][:nodes].size == coords_count
+        return last_connection_distance = edge.coord_a.x * edge.coord_b.x 
+      end
+    end
+  end
+
 end
 
 def make_connections(sorted_edges_array)
   tracker = CircuitTracker.new
-  connections_made = 0
   
   sorted_edges_array.each do |edge|
-    if tracker.add_edge(edge)
-      connections_made += 1
-      puts "no of circuits = #{tracker.circuits.length}"
-      # count number of circuits down when zero multiple the xs of the two coord in the latest edge
-      # 
-    end
+    tracker.add_edge(edge)
   end
   
   tracker
@@ -117,30 +121,26 @@ class CircuitTracker
       @circuits[circuit_id] = { nodes: Set[coord_a, coord_b], edges: [edge] }
       @node_to_circuit_ids[coord_a] = circuit_id
       @node_to_circuit_ids[coord_b] = circuit_id
-      # puts("new circuit added #{circuit_id}, circuit count=> ", @circuits.keys.length)
+      
       # extend circuit a
     elsif circuit_a_id && !circuit_b_id
       @circuits[circuit_a_id][:nodes].add(coord_b)
       @circuits[circuit_a_id][:edges] << edge
       @node_to_circuit_ids[coord_b] = circuit_a_id
-      # puts("coord b #{coord_b} added to circuit_a #{circuit_a_id}, circuit count=> ", @circuits.keys.length)
       
       # extend circuit b
     elsif !circuit_a_id && circuit_b_id
       @circuits[circuit_b_id][:nodes].add(coord_a)
       @circuits[circuit_b_id][:edges] << edge
       @node_to_circuit_ids[coord_a] = circuit_b_id
-      # puts("coord a #{coord_a} added to circuit_b #{circuit_b_id}, circuit count=> ", @circuits.keys.length)
       
       # both in same circuit already
     elsif circuit_a_id == circuit_b_id
-      # puts("both coord_a; #{coord_a} and coord_b #{coord_b} are already in the same curcuit; #{circuit_a_id}, circuit count=> ", @circuits.keys.length)
-      # @circuits[circuit_a_id][:edges] << edge
       return false
+      
       # both are in circuits but not the same
     elsif circuit_a_id && circuit_b_id && (circuit_a_id != circuit_b_id)
       merge_circuits(circuit_a_id, circuit_b_id, edge)
-      # puts("both coord_a; #{coord_a} and coord_b #{coord_b} are already in curcuits, but different ones, merging them to circuit_a #{circuit_a_id}, circuit count=> ", @circuits.keys.length)
     end
 
     return true
@@ -188,14 +188,6 @@ TEST_DATA = [
   "425,690,689"
 ]
 
-
-# coord_a = Coord.new(162, 817, 812)
-# coord_b = Coord.new(425, 690, 689)
-# coord_c = Coord.new(984, 92, 344)
-
-
-# puts largest_3_sum(TEST_DATA)
-
 puts "Running test 1"
 result = largest_3_sum(TEST_DATA, 10)
 puts result === 40 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
@@ -204,13 +196,13 @@ puts "Running real data test 1"
 result = largest_3_sum(REAL_DATA, 1000)
 puts result === 72150 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
 
-# puts "Running test 2"
-# result = larges_3_sum(TEST_DATA)
-# puts result === 40 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
+puts "Running test 2"
+result = connecting_coord_x_distance(TEST_DATA)
+puts result === 25272 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
 
-# puts "Running real data test 2"
-# time = Benchmark.measure do
-#   result = path_count(REAL_DATA)
-# end
-# puts 'time taken -> ', time
-# puts result === 18818811755665 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
+puts "Running real data test 2"
+time = Benchmark.measure do
+  result = connecting_coord_x_distance(REAL_DATA)
+end
+puts 'time taken -> ', time
+puts result === 3926518899 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
