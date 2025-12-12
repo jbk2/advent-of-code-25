@@ -29,7 +29,7 @@ end
 def max_joltage_twelve(input)
   highest_bank_joltages = []
 
-  input.each do |bank|
+  input.reject(&:empty?).each do |bank|
     selected_batteries = []
     no_of_picks = 12
     bank_length = bank.length
