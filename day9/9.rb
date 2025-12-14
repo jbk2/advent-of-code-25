@@ -10,11 +10,12 @@ def area(coord_a, coord_b)
 end
 
 def largest_rect(positions)
-  row_sorted_coords = sort_by_row(positions)
+  coord_data = create_coords(positions)
+  sorted_coord_data = coord_data.sort_by! {|coord| coord.row }
   all_rects = {}
 
-  row_sorted_coords.each_with_index do |coord_a, coord_a_idx|
-    row_sorted_coords.each_with_index do |coord_b, coord_b_idx|
+  sorted_coord_data.each_with_index do |coord_a, coord_a_idx|
+    sorted_coord_data.each_with_index do |coord_b, coord_b_idx|
       next if coord_a_idx >= coord_b_idx
       all_rects[[coord_a, coord_b]] = area(coord_a, coord_b)
     end  
@@ -22,7 +23,7 @@ def largest_rect(positions)
   all_rects.values.max
 end
 
-def sort_by_row(string_positions)
+def create_coords(string_positions)
   coords = string_positions.reject(&:empty?).map(&:strip).map do |string_position|
     array = string_position.split(',')
     Coord.new(array[1].to_i, array[0].to_i)
