@@ -28,7 +28,34 @@ def create_coords(string_positions)
     array = string_position.split(',')
     Coord.new(array[1].to_i, array[0].to_i)
   end
-  coords.sort_by! {|coord| coord.row }
+end
+
+def create_polygon(input)
+  red_tiles = create_coords(input)
+  puts red_tiles
+  all_tiles = []
+
+  red_tiles.each_with_index do |coord_a, coord_a_index|
+    coord_b = red_tiles[(coord_a_index + 1) % red_tiles.length]
+    # binding.irb
+    if coord_a.row == coord_b.row
+      step = coord_a.col < coord_b.col ? 1 : -1
+      col = coord_a.col
+      while col != coord_b.col
+        all_tiles << Coord.new(coord_a.row, col)
+        col += step
+      end
+    elsif coord_a.col == coord_b.col
+      step = coord_a.row < coord_b.row ? 1 : -1
+      row = coord_a.row
+      while row != coord_b.row
+        all_tiles << Coord.new(row, coord_a.col)
+        row += step
+      end
+    end
+  end
+
+  all_tiles
 end
 
 ####################################
@@ -48,9 +75,9 @@ puts "Running real data test 1"
 result = largest_rect(REAL_DATA)
 puts result === 4748769124 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
 
-# puts "Running test 2"
-# result = connecting_coord_x_distance(TEST_DATA)
-# puts result === 25272 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
+puts "Running test 2"
+result = create_polygon(TEST_DATA)
+puts result === 0 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
 
 # puts "Running real data test 2"
 # time = Benchmark.measure do
