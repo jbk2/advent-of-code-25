@@ -1,6 +1,12 @@
 require_relative "../utils"
 require 'benchmark'
-Coord = Struct.new('Coord', :row, :col)
+
+Coord = Struct.new('Coord', :row, :col, :color) do
+  def initialize(row, col, color = 'red')
+    super(row, col, color)
+  end
+end
+
 Rectange = Struct.new('Rectangle', :coord_a, :coord_b, :area)
 
 def area(coord_a, coord_b)
@@ -31,31 +37,45 @@ def create_coords(string_positions)
 end
 
 def create_polygon(input)
-  red_tiles = create_coords(input)
-  puts red_tiles
-  all_tiles = []
+  red_tile_coords = create_coords(input)
+  all_tiles = red_and_green_tiles(red_tile_coords)
+  puts all_tiles
+  
+end
 
-  red_tiles.each_with_index do |coord_a, coord_a_index|
-    coord_b = red_tiles[(coord_a_index + 1) % red_tiles.length]
-    # binding.irb
+def red_and_green_tiles(red_tile_coords)
+  red_and_green_tiles = []
+  red_tile_coords.each_with_index do |coord_a, coord_a_index|
+    coord_b = red_tile_coords[(coord_a_index + 1) % red_tile_coords.length]
+    
     if coord_a.row == coord_b.row
+       # coord_b could be either higher or lower tha coord_a on either axis so,
+       # count in the correct direction from a to b
       step = coord_a.col < coord_b.col ? 1 : -1
-      col = coord_a.col
+      col = coord_a.col < coord_b.col ? coord_a.col + 1 : coord_a.col - 1
+      red_and_green_tiles << coord_a
+
       while col != coord_b.col
-        all_tiles << Coord.new(coord_a.row, col)
+        red_and_green_tiles << Coord.new(coord_a.row, col, 'green')
         col += step
       end
     elsif coord_a.col == coord_b.col
       step = coord_a.row < coord_b.row ? 1 : -1
-      row = coord_a.row
+      row = coord_a.row < coord_b.row ? coord_a.row + 1 : coord_a.row - 1
+      red_and_green_tiles << coord_a
+
       while row != coord_b.row
-        all_tiles << Coord.new(row, coord_a.col)
+        red_and_green_tiles << Coord.new(row, coord_a.col, 'green')
         row += step
       end
     end
   end
+  fill_polygon_interior(red_and_green_tiles)
+end
 
-  all_tiles
+def fill_polygon_interior(red_and_green_tiles)
+  red_and_green_tiles
+  
 end
 
 ####################################
