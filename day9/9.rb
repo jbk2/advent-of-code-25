@@ -95,60 +95,49 @@ end
 
 def largest_filled_rect(input)
   red_tiles = create_coords(input)
-
-  r_idx, c_idx, prefix = build_valid_area_prefix(red_tiles)
+  rows, cols, r_idx, c_idx = build_compressed_axes(red_tiles)
+  grid = build_boundary_grid(red_tiles, rows, cols, r_idx, c_idx)
+  fill_grid_outside_boundary!(grid)
 
   max_area = 0
-  red_tiles.each_with_index do |a, i|
-    red_tiles.each_with_index do |b, j|
-      next if i >= j
 
-      min_row, max_row = [a.row, b.row].minmax
-      min_col, max_col = [a.col, b.col].minmax
+  red_tiles.each_with_index do |tile_a, tile_a_idx|
+    red_tiles.each_with_index do |tile_b, tile_b_idx|
+      next if tile_a_idx >= tile_b_idx
+
+      min_row, max_row = [tile_a.row, tile_b.row].minmax
+      min_col, max_col = [tile_a.col, tile_b.col].minmax
 
       rect_area = (max_row - min_row + 1) * (max_col - min_col + 1)
       next if rect_area <= max_area
 
-      # Rectangle covers [min_row, max_row+1) x [min_col, max_col+1)
-      r0 = r_idx[min_row]
-      r1 = r_idx[max_row + 1]
-      c0 = c_idx[min_col]
-      c1 = c_idx[max_col + 1]
-
-      valid_area = prefix[r1][c1] - prefix[r0][c1] - prefix[r1][c0] + prefix[r0][c0]
-      max_area = rect_area if valid_area == rect_area
+      next unless rectangle_enclosed?(min_row, max_row, min_col, max_col, r_idx, c_idx, grid)
+      
+      max_area = rect_area
     end
   end
 
   max_area
 end
 
-def build_valid_area_prefix(red_tiles)
-  rows, cols, r_idx, c_idx = build_compressed_axes(red_tiles)
-  wall = build_wall_grid(red_tiles, rows, cols, r_idx, c_idx)
-  outside = flood_fill_outside(wall)
-  prefix = build_valid_area_prefix_sum(outside, rows, cols)
-  [r_idx, c_idx, prefix]
-end
-
 def build_compressed_axes(red_tiles)
-  # each tile is a square with edges going from [row,row+1) x [col,col+1)
   min_row, max_row = red_tiles.map(&:row).minmax
   min_col, max_col = red_tiles.map(&:col).minmax
 
-  row_vals = Set.new([min_row - 1, max_row + 2])
-  col_vals = Set.new([min_col - 1, max_col + 2])
+  # compress grid lines/tile edges, not tile centers
+  row_edges = Set.new([min_row - 1, max_row + 2])
+  col_edges = Set.new([min_col - 1, max_col + 2])
 
   red_tiles.each do |t|
-    # Add neighbors so corner contacts don't create leaks.
-    [t.row - 1, t.row, t.row + 1, t.row + 2].each { row_vals.add(_1) }
-    [t.col - 1, t.col, t.col + 1, t.col + 2].each { col_vals.add(_1) }
+    # Tile Y edges; [row,row+1), tile X edges; [col,col+1)
+    [t.row, t.row + 1].each { row_edges.add(_1) }
+    [t.col, t.col + 1].each { col_edges.add(_1) }
   end
 
-  rows = row_vals.to_a.sort
-  cols = col_vals.to_a.sort
+  rows = row_edges.to_a.sort
+  cols = col_edges.to_a.sort
 
-  r_idx = {}
+  r_idx = {} # hash data map, key is row value, value is index position of that value within rows 
   rows.each_with_index { |v, i| r_idx[v] = i }
   c_idx = {}
   cols.each_with_index { |v, i| c_idx[v] = i }
@@ -156,102 +145,124 @@ def build_compressed_axes(red_tiles)
   [rows, cols, r_idx, c_idx]
 end
 
-def build_wall_grid(red_tiles, rows, cols, r_idx, c_idx)
-  h = rows.length - 1
-  w = cols.length - 1
-  wall = Array.new(h) { Array.new(w, false) }
+def build_boundary_grid(red_tiles, rows, cols, r_idx, c_idx)
+  height = rows.length - 1
+  width = cols.length - 1
+  grid = Array.new(height) { Array.new(width, ".") }
 
-  # Draw boundary tiles for each axis-aligned segment.
-  red_tiles.each_with_index do |a, i|
-    b = red_tiles[(i + 1) % red_tiles.length]
+  # Mark boundary tiles with '#'
+  red_tiles.each_with_index do |tile_a, tile_a_idx|
+    tile_b = red_tiles[(tile_a_idx + 1) % red_tiles.length]
 
-    if a.row == b.row
-      r = r_idx[a.row]
-      c0, c1 = [a.col, b.col].minmax
-      start = c_idx[c0]
-      finish = c_idx[c1 + 1] - 1
-      (start..finish).each { |cj| wall[r][cj] = true }
+    if tile_a.row == tile_b.row
+      row = r_idx[tile_a.row]
+      min_col, max_col = [tile_a.col, tile_b.col].minmax
+      start = c_idx[min_col]
+      finish = c_idx[max_col + 1] - 1
+      (start..finish).each { |col| grid[row][col] = '#' }
     else
-      c = c_idx[a.col]
-      r0, r1 = [a.row, b.row].minmax
-      start = r_idx[r0]
-      finish = r_idx[r1 + 1] - 1
-      (start..finish).each { |ri| wall[ri][c] = true }
+      col = c_idx[tile_a.col]
+      min_row, max_row = [tile_a.row, tile_b.row].minmax
+      start = r_idx[min_row]
+      finish = r_idx[max_row + 1] - 1
+      (start..finish).each { |row| grid[row][col] = '#' }
     end
   end
 
-  wall
+  grid
 end
 
-def flood_fill_outside(wall)
-  h = wall.length
-  w = wall[0].length
-  outside = Array.new(h) { Array.new(w, false) }
+def fill_grid_outside_boundary!(grid)
+  height = grid.length
+  width = grid[0].length
 
-  # Start from the padded top-left cell (guaranteed outside).
-  stack = [[0, 0]]
-  outside[0][0] = true
+  stack = [[0, 0]] # definitely outside due to padding
+  directions = [[1, 0],[-1, 0],[0, 1],[0, -1]]
 
-  until stack.empty?
-    r, c = stack.pop
-    [[r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]].each do |nr, nc|
-      next if nr < 0 || nr >= h || nc < 0 || nc >= w
-      next if outside[nr][nc]
-      next if wall[nr][nc]
-      outside[nr][nc] = true
-      stack << [nr, nc]
+  while (cell = stack.pop)
+    row, col = cell
+    next if row < 0 || row >= height || col < 0 || col >= width
+    next unless grid[row][col] == '.'
+    grid[row][col] = 'O'
+
+    directions.each do |dr, dc|
+      stack << [row + dr, col + dc]
     end
   end
-
-  outside
 end
 
-def build_valid_area_prefix_sum(outside, rows, cols)
-  h = outside.length
-  w = outside[0].length
-  prefix = Array.new(h + 1) { Array.new(w + 1, 0) }
+def rectangle_enclosed?(min_row, max_row, min_col, max_col, r_idx, c_idx, grid)
+  top, bottom = r_idx[min_row], r_idx[max_row]
+  left, right = c_idx[min_col], c_idx[max_col]
 
-  (0...h).each do |i|
-    row_sum = 0
-    (0...w).each do |j|
-      cell_area = outside[i][j] ? 0 : (rows[i + 1] - rows[i]) * (cols[j + 1] - cols[j])
-      row_sum += cell_area
-      prefix[i + 1][j + 1] = prefix[i][j + 1] + row_sum
-    end
+  valid = ->(row, col) { grid[row][col] != 'O' }
+
+  (left..right).each do |col|
+    return false unless valid.call(top, col)
+    return false unless valid.call(bottom, col)
   end
 
-  prefix
+  (top..bottom).each do |row|
+    return false unless valid.call(row, left)
+    return false unless valid.call(row, right)
+  end
+
+  true
 end
 
-def red_and_green_tiles(red_tile_coords)
-  red_and_green_tiles = Set.new
-  red_tile_coords.each_with_index do |coord_a, coord_a_index|
-    coord_b = red_tile_coords[(coord_a_index + 1) % red_tile_coords.length]
+# def build_valid_area_prefix_sum(outside, rows, cols)
+#   h = outside.length
+#   w = outside[0].length
+#   prefix = Array.new(h + 1) { Array.new(w + 1, 0) }
+
+#   (0...h).each do |i|
+#     row_sum = 0
+#     (0...w).each do |j|
+#       cell_area = outside[i][j] ? 0 : (rows[i + 1] - rows[i]) * (cols[j + 1] - cols[j])
+#       row_sum += cell_area
+#       prefix[i + 1][j + 1] = prefix[i][j + 1] + row_sum
+#     end
+#   end
+
+#   prefix
+# end
+
+# def red_and_green_tiles(red_tile_coords)
+#   red_and_green_tiles = Set.new
+#   red_tile_coords.each_with_index do |coord_a, coord_a_index|
+#     coord_b = red_tile_coords[(coord_a_index + 1) % red_tile_coords.length]
     
-    if coord_a.row == coord_b.row
-       # coord_b could be either higher or lower tha coord_a on either axis so,
-       # count in the correct direction from a to b
-      step = coord_a.col < coord_b.col ? 1 : -1
-      col = coord_a.col < coord_b.col ? coord_a.col + 1 : coord_a.col - 1
-      red_and_green_tiles.add([coord_a.row, coord_a.col])
+#     if coord_a.row == coord_b.row
+#        # coord_b could be either higher or lower tha coord_a on either axis so,
+#        # count in the correct direction from a to b
+#       step = coord_a.col < coord_b.col ? 1 : -1
+#       col = coord_a.col < coord_b.col ? coord_a.col + 1 : coord_a.col - 1
+#       red_and_green_tiles.add([coord_a.row, coord_a.col])
 
-      while col != coord_b.col
-        red_and_green_tiles.add([coord_a.row, col])
-        col += step
-      end
-    elsif coord_a.col == coord_b.col
-      step = coord_a.row < coord_b.row ? 1 : -1
-      row = coord_a.row < coord_b.row ? coord_a.row + 1 : coord_a.row - 1
-      red_and_green_tiles.add([coord_a.row, coord_a.col])
+#       while col != coord_b.col
+#         red_and_green_tiles.add([coord_a.row, col])
+#         col += step
+#       end
+#     elsif coord_a.col == coord_b.col
+#       step = coord_a.row < coord_b.row ? 1 : -1
+#       row = coord_a.row < coord_b.row ? coord_a.row + 1 : coord_a.row - 1
+#       red_and_green_tiles.add([coord_a.row, coord_a.col])
 
-      while row != coord_b.row
-        red_and_green_tiles.add([row, coord_a.col])
-        row += step
-      end
-    end
-  end
-  red_and_green_tiles
-end
+#       while row != coord_b.row
+#         red_and_green_tiles.add([row, coord_a.col])
+#         row += step
+#       end
+#     end
+#   end
+#   red_and_green_tiles
+# end
+
+# def compress_2d(input)
+#   coords_arr = create_coords(input)
+#   map = Hash.new() 
+#   rows = coords_arr.map(&:row)
+#   cols = coords_arr.map(&:col).uniq
+# end
 
 # def fill_polygon_interior(red_and_green_tiles)
 #   red_and_green_set = Set.new(red_and_green_tiles.map {|tile| [tile.row, tile.col] })
