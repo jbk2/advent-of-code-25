@@ -1,10 +1,16 @@
 require_relative "../utils"
 require 'benchmark'
+
 def split_data(input)
   input.map do |str|
     arr = str.split(' ')
     lights, *buttons, batteries = arr
-    return { lights: lights, buttons: buttons, batteries: batteries  } 
+    data = {
+      lights: lights.gsub!(/[\[\]]/, ""),
+      buttons: buttons.map { |button| button.delete!("()") },
+      batteries: batteries.delete!("{}")
+    }
+    return data
   end
 end
 
@@ -17,7 +23,8 @@ TEST_DATA = ['[.##.] (3) (1,3) (2) (2,3) (0,2) (0,1) {3,5,4,7}']
 # puts largest_rect(TEST_DATA)
 # puts largest_rect(TEST_DATA).each {|e| puts e.inspect }
 # puts REAL_DATA.inspect
-puts split_data(TEST_DATA).inspect
+split_data(TEST_DATA) => { lights:, buttons:, batteries: }
+puts lights.inspect
 # puts "Running test 1"
 # result = largest_rect(TEST_DATA)
 # puts result === 50 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
