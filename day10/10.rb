@@ -1,24 +1,24 @@
 require_relative "../utils"
 require 'benchmark'
-require 'debug'
 
 def split_data(input)
   input.reject!(&:empty?)
-  parsed_input = input.map do |str|
-    arr = str.split(' ')
-    lights, *buttons, batteries = arr
-    
-    lights = lights.gsub!(/[\[\]]/, "").split('').map { |el| el == '#' ? 1 : 0 }
-    lights_count = lights.length
-    
-    buttons.map! do |button|        
-      btn_arr = button.delete!("()").split(',').map(&:to_i)
-      btn_bitmask(lights_count, btn_arr)
+  input.map do |line|
+    parts = line.split(' ')
+    lights_token, *button_tokens, batteries_token = parts
+
+    lights = lights_token.delete('[]').chars.map { |ch| ch == '#' ? 1 : 0 }
+    batteries = batteries_token.delete('{}').split(',').map(&:to_i)
+
+    # Keep raw button index lists so we can build masks of different lengths (lights vs batteries).
+    button_index_lists = button_tokens.map do |tok|
+      tok.delete('()').split(',').map(&:to_i)
     end
-  
-    batteries = batteries.delete!("{}").split(',').map(&:to_i)
-  
-    { lights: lights, buttons: buttons, batteries: batteries }
+
+    light_buttons = button_index_lists.map { |idxs| btn_bitmask(lights.length, idxs) }
+    joltage_buttons = button_index_lists.map { |idxs| btn_bitmask(batteries.length, idxs) }
+
+    { lights: lights, light_buttons: light_buttons, joltage_buttons: joltage_buttons, batteries: batteries }
   end
 end
 
@@ -33,7 +33,7 @@ def total_combos(input)
   total_btn_presses = []
   
   data.each do |machine|
-    lights, buttons = machine.values_at(:lights, :buttons)
+    lights, buttons = machine.values_at(:lights, :light_buttons)
     no_of_lights = lights.length
     btn_count = buttons.length
     found = false
@@ -61,67 +61,101 @@ def total_combos(input)
 end
 
 def counts_to_joltage(input)
-  data = split_data(input)
-  fewest_presses = []
-
-  data.each do |machine|
-    buttons, batteries = machine.values_at(:buttons, :batteries)
-    remaining_joltage = batteries.dup
-
-    fewest_presses << search_joltage(buttons, remaining_joltage, 0, Float::INFINITY)
-    
+  split_data(input).sum do |machine|
+    buttons, batteries = machine.values_at(:joltage_buttons, :batteries)
+    min_presses_for_joltage_machine(buttons, batteries)
   end
-
-  fewest_presses.sum
 end
 
-def search_joltage(buttons, remaining_joltage, press_count, least_count)
-  return least_count if press_count >= least_count
-  return press_count if remaining_joltage.all?(0)
-  return least_count if press_count + min_remaining_presses(remaining_joltage) >= least_count
+# --- Part 2: fast exact solver (elimination + small enumeration) ---
 
-  buttons = remove_unviable_buttons(buttons.dup, remaining_joltage)
-  return least_count if buttons.empty?
+def gauss_jordan_rref(augmented_rows)
+  row_count = augmented_rows.length
+  col_count = augmented_rows[0].length # includes RHS
+  var_count = col_count - 1
 
-  button = buttons.first
-  max_times = remaining_joltage.each_index.select { |i| button[i] == 1 }.map { |i| remaining_joltage[i] }.min
+  pivot_cols = []
+  pivot_row = 0
 
-  max_times.downto(0) do |times|
-    new_remaining_joltage = press_btn_times(remaining_joltage, button, times)
-    next unless new_remaining_joltage
-     new_buttons = buttons.dup
-     new_buttons.delete(button)
+  (0...var_count).each do |col|
+    row_with_pivot = (pivot_row...row_count).find { |r| augmented_rows[r][col] != 0 }
+    next unless row_with_pivot
 
-     least_count = [least_count, search_joltage(new_buttons, new_remaining_joltage, press_count + times, least_count)].min
+    augmented_rows[pivot_row], augmented_rows[row_with_pivot] = augmented_rows[row_with_pivot], augmented_rows[pivot_row]
+
+    pivot_val = augmented_rows[pivot_row][col]
+    augmented_rows[pivot_row].map! { |x| x / pivot_val }
+
+    (0...row_count).each do |r|
+      next if r == pivot_row
+      factor = augmented_rows[r][col]
+      next if factor == 0
+      col_count.times { |k| augmented_rows[r][k] -= factor * augmented_rows[pivot_row][k] }
+    end
+
+    pivot_cols << col
+    pivot_row += 1
+    break if pivot_row == row_count
   end
 
-  least_count
+  [augmented_rows, pivot_cols]
 end
 
-def remove_unviable_buttons(buttons, remaining)
-  remaining.each_with_index do |joltage, idx|
-    if joltage < 1
-      buttons.reject! { |bat| bat[idx] == 1 }
+def min_presses_for_joltage_machine(button_masks, targets)
+  counter_count = targets.length
+  button_count = button_masks.length
+
+  augmented = Array.new(counter_count) do |counter_idx|
+    coeffs = Array.new(button_count) { |button_idx| button_masks[button_idx][counter_idx] }
+    coeffs.map { |v| Rational(v, 1) } + [Rational(targets[counter_idx], 1)]
+  end
+
+  rref, pivot_cols = gauss_jordan_rref(augmented)
+
+  # Inconsistent system? (0 = non-zero)
+  rref.each do |row|
+    left = row[0...button_count]
+    rhs = row[button_count]
+    raise "No solution for joltage machine" if left.all?(&:zero?) && rhs != 0
+  end
+
+  free_cols = (0...button_count).to_a - pivot_cols
+
+  max_free = free_cols.to_h do |button_idx|
+    touched = (0...counter_count).select { |i| button_masks[button_idx][i] == 1 }
+    [button_idx, touched.empty? ? 0 : touched.map { |i| targets[i] }.min]
+  end
+
+  best_total = nil
+  presses = Array.new(button_count, 0)
+
+  assign_free = lambda do |free_pos|
+    if free_pos == free_cols.length
+      pivot_cols.each_with_index do |pivot_col, row_idx|
+        row = rref[row_idx]
+        rhs = row[button_count]
+        free_cols.each { |fc| rhs -= row[fc] * presses[fc] }
+
+        return unless rhs.denominator == 1
+        value = rhs.numerator
+        return if value < 0
+        presses[pivot_col] = value
+      end
+
+      total = presses.sum
+      best_total = total if best_total.nil? || total < best_total
+      return
+    end
+
+    col = free_cols[free_pos]
+    (0..max_free[col]).each do |v|
+      presses[col] = v
+      assign_free.call(free_pos + 1)
     end
   end
-  buttons
-end
 
-def press_btn_times(remaining, button, times)
-  return remaining if times < 1
-  updated_remaining = remaining.dup
-
-  button.each_with_index do |battery, idx|
-    next unless battery == 1
-    updated_remaining[idx] -= times
-    return false if updated_remaining[idx] < 0
-  end
-
-  updated_remaining
-end
-
-def min_remaining_presses(remaining)
-  remaining.max
+  assign_free.call(0)
+  best_total
 end
 
 ####################################
@@ -147,4 +181,4 @@ time = Benchmark.measure do
   result = counts_to_joltage(REAL_DATA)
 end
 puts 'time taken -> ', time
-puts result === 1525991432 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
+puts result == 18981 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
