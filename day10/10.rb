@@ -62,27 +62,43 @@ end
 
 def counts_to_joltage(input)
   data = split_data(input)
-  total_btn_presses = 0
+  fewest_presses = []
 
   data.each do |machine|
     buttons, batteries = machine.values_at(:buttons, :batteries)
     remaining_joltage = batteries.dup
-    btn_count = buttons.length
 
+    fewest_presses << search_joltage(buttons, remaining_joltage, 0, Float::INFINITY)
     
-    (1..btn_count).times do |i|
-      buttons.combination(i) do |combinations|
-        
-      end
-    end
-
   end
-  # 
-  #
-  #
+
+  fewest_presses.sum
 end
 
-def remove_unviable_batteries(buttons, remaining)
+def search_joltage(buttons, remaining_joltage, press_count, least_count)
+  return least_count if press_count >= least_count
+  return press_count if remaining_joltage.all?(0)
+  return least_count if press_count + min_remaining_presses(remaining_joltage) >= least_count
+
+  buttons = remove_unviable_buttons(buttons.dup, remaining_joltage)
+  return least_count if buttons.empty?
+
+  button = buttons.first
+  max_times = remaining_joltage.each_index.select { |i| button[i] == 1 }.map { |i| remaining_joltage[i] }.min
+
+  max_times.downto(0) do |times|
+    new_remaining_joltage = press_btn_times(remaining_joltage, button, times)
+    next unless new_remaining_joltage
+     new_buttons = buttons.dup
+     new_buttons.delete(button)
+
+     least_count = [least_count, search_joltage(new_buttons, new_remaining_joltage, press_count + times, least_count)].min
+  end
+
+  least_count
+end
+
+def remove_unviable_buttons(buttons, remaining)
   remaining.each_with_index do |joltage, idx|
     if joltage < 1
       buttons.reject! { |bat| bat[idx] == 1 }
@@ -97,17 +113,14 @@ def press_btn_times(remaining, button, times)
 
   button.each_with_index do |battery, idx|
     next unless battery == 1
-    if updated_remaining[idx] > 0
-      updated_remaining[idx] -= 1
-    else
-      return false
-    end
+    updated_remaining[idx] -= times
+    return false if updated_remaining[idx] < 0
   end
 
   updated_remaining
 end
 
-def min_remainign_presses(remaining)
+def min_remaining_presses(remaining)
   remaining.max
 end
 
@@ -125,13 +138,13 @@ puts "Running real data test 1"
 result = total_combos(REAL_DATA)
 puts result === 507 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
 
-# puts "Running test 2"
-# result = countrs_to_joltage(TEST_DATA)
-# puts result === 33 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
+puts "Running test 2"
+result = counts_to_joltage(TEST_DATA)
+puts result === 33 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
 
-# puts "Running real data test 2"
-# time = Benchmark.measure do
-#   result = largest_filled_rect(REAL_DATA)
-# end
-# puts 'time taken -> ', time
-# puts result === 1525991432 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
+puts "Running real data test 2"
+time = Benchmark.measure do
+  result = counts_to_joltage(REAL_DATA)
+end
+puts 'time taken -> ', time
+puts result === 1525991432 ? colorize("test Passed", 32) : colorize("test failed with result of #{result}", 31)
