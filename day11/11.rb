@@ -1,9 +1,21 @@
+require_relative "../utils"
+require 'benchmark'
+
+def parse_data(input)
+  sorted_data = input.reject!(&:empty?).map do |device|
+    match = device.match(/^([^:]+):\s*(.*)$/)
+    { match[1] => match[2].split(' ') }
+  end
+  sorted_data
+end
 
 ####################################
 REAL_DATA = fetch_puzzle_input(11)
-TEST_DATA = ['']
+TEST_DATA = ['aaa: you hhh', 'you: bbb ccc', 'bbb: ddd eee', 'ccc: ddd eee fff', 'ddd: ggg', 'eee: out', 'fff: out', 'ggg: out', 'hhh: ccc fff iii', 'iii: out', '']
 
-puts counts_to_joltage(TEST_DATA)
+# puts REAL_DATA.inspect
+puts parse_data(TEST_DATA).inspect
+# puts parse_data(REAL_DATA).inspect
 
 # puts "Running test 1"
 # result = total_combos(TEST_DATA)
