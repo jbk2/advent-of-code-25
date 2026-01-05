@@ -2,19 +2,38 @@ require_relative "../utils"
 require 'benchmark'
 
 def parse_data(input)
-  sorted_data = input.reject!(&:empty?).map do |device|
+  devices = {}
+  
+  input.reject!(&:empty?).map do |device|
     match = device.match(/^([^:]+):\s*(.*)$/)
-    { match[1] => match[2].split(' ') }
+    devices[match[1]] = match[2].split(' ')
   end
-  sorted_data
+  
+  devices
 end
+
+def count_paths(input)
+  data = parse_data(input)
+
+  dfs = ->(self_fn, node) do 
+    return 1 if node == "out"
+
+    children = data[node] | []
+    children.sum { |child| self_fn.call(self_fn, child) }
+  end
+
+  paths = dfs.call(dfs, "you")
+  paths
+end
+
+
 
 ####################################
 REAL_DATA = fetch_puzzle_input(11)
 TEST_DATA = ['aaa: you hhh', 'you: bbb ccc', 'bbb: ddd eee', 'ccc: ddd eee fff', 'ddd: ggg', 'eee: out', 'fff: out', 'ggg: out', 'hhh: ccc fff iii', 'iii: out', '']
 
 # puts REAL_DATA.inspect
-puts parse_data(TEST_DATA).inspect
+puts count_paths(REAL_DATA).inspect
 # puts parse_data(REAL_DATA).inspect
 
 # puts "Running test 1"
