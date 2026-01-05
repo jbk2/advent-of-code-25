@@ -1,4 +1,4 @@
-const sessionCookie = "53616c7465645f5f73499419b06debc22daa6d862c82262cae17bb2a35b814f8e5cfa1d068669724a31a971c8c9401463f6e52d4ca6b29f98dee2ed11dfb8b23"
+const sessionCookie = "53616c7465645f5f70dd06ae85d449d3a6edbb1c12b814dfccbaa2e4cfadb0451953d72a519b674d38c6c9157e03a3434e07e49b889a6c6af69d7e3b679856cb"
 
 async function getInput(url) {
   const response = await fetch(url, {
