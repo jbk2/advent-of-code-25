@@ -1,53 +1,6 @@
 require_relative "../utils"
 require 'benchmark'
 
-def parse_data(input)
-  devices = {}
-  
-  input.reject!(&:empty?)
-  input.map do |device|
-    match = device.match(/^([^:]+):\s*(.*)$/)
-    devices[match[1]] = match[2].split(' ')
-  end
-  
-  devices
-end
-
-def count_paths(input)
-  data = parse_data(input)
-
-  dfs = ->(self_fn, node) do 
-    return 1 if node == "out"
-
-    children = data[node] || []
-    children.sum { |child| self_fn.call(self_fn, child) }
-  end
-
-  paths = dfs.call(dfs, "you")
-  paths
-end
-
-def count_paths_2(input)
-  data = parse_data(input)
-  memo = {}
-
-  dfs = ->(self_fn, node, fft=false, dac=false) do 
-    fft ||= (node == 'fft')
-    dac ||= (node == 'dac')
-    
-    return (fft && dac) ? 1 : 0 if node =="out"
-    
-    key = [node, fft, dac]
-    return memo[key] if memo.key?(key)
-
-    children = data[node] || []
-    memo[key] = children.sum { |child| self_fn.call(self_fn, child, fft, dac) }
-  end
-
-  paths = dfs.call(dfs, "svr")
-  paths
-end
-
 
 
 
