@@ -1,4 +1,5 @@
 require "json"
+require "fileutils"
 
 def fetch_puzzle_input(day = 1)
   url = "https://adventofcode.com/2025/day/#{day}/input"
@@ -6,6 +7,18 @@ def fetch_puzzle_input(day = 1)
   JSON.parse(output)
 end
 
+def fetch_cached_input(day_no)
+  if File.exist?("day#{day_no}/#{day_no}.json")
+    return JSON.parse(File.read("day#{day_no}/#{day_no}.json"))
+  else
+    dir = "day#{day_no}"
+    data = fetch_puzzle_input(day_no)
+  
+    FileUtils.mkdir(dir, verbose: true) unless Dir.exist?(dir)
+    File.write("#{dir}/#{day_no}.json", JSON.dump(data)) unless File.exist?("#{dir}/#{day_no}.json")
+    data
+  end
+end
 ################ ANSI STYLE HELPER ####################
 BLACK   = 30
 RED     = 31
